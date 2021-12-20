@@ -1,0 +1,282 @@
+---
+title: "Cyclistic Bike Company"
+author: "Pratibha"
+date: "12/17/2021"
+output: html_document
+---
+
+# Cyclistic Bike-Share Case Study
+
+
+
+## Business Task
+Cyclistic is a bicycle share company operating in Chicago. It has two types of membership: casual and members. Members are people who have annual membership with the company and use cycles regularly as a means of transport
+The director of marketing believes the company’s future success depends on maximizing the number of annual memberships. Therefore, your team wants to understand how casual riders and annual members use Cyclistic bikes differently. From these insights, your team will design a new marketing strategy to convert casual riders into annual members.
+
+
+## Shareholders
++	Lily Moreno: The director of marketing. She is responsible for the development of campaigns and initiatives to     promote the bike-share program
++	Cyclistic Company
++ Cyclistic marketing analytics team: A team of data analysts who are responsible for collecting, analyzing, and     reporting data that helps guide Cyclistic marketing strategy.
++	Cyclistic executive team: The detail-oriented executive team will decide whether to approve the recommended marketing program
+
+# Phases of Data Analysis
+## Ask:
+ The question you need to ask to understand the goal. Three questions will guide the future marketing program:
++	How do annual members and casual riders use Cyclistic bikes differently? 
++ Why would casual riders buy Cyclistic annual memberships? 
++ How can Cyclistic use digital media to influence casual riders to become members
+
+## Prepare and Process:
+The data is in a public database.  The data has been made available by Motivate International Inc. The data is organized month wise starting from April 2020. It has 13 columns :ride_id, rideable_type,started_at,ended_at,         start_station_name, start_station_id, end_station_name, end_station_id, start_lat, start_lng, end_lat, end_lng, member_casual 
+
+
+
+### install and load libraries for data wrangling and visualization
+
+```{r, echo = FALSE, warning=FALSE}
+options(repos = list(CRAN="http://cran.rstudio.com/"))
+install.packages("tidyverse")
+install.packages("ggplot2")
+install.packages("lubridate")
+install.packages("chron")
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(chron)
+```
+
+
+### Import 12  csv files from May 2020 till April 2021
+
+```{r, echo = FALSE, warning=FALSE}
+May2020 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_2.csv")
+June2020 <-read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_3.csv")
+July2020<-read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_4.csv")
+August2020 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_5.csv")
+Sept2020 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_6.csv")
+Oct2020 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_7.csv")
+Nov2020 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_8.csv")
+Dec2020 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_9.csv")
+Jan2021 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_10.csv")
+Feb2021 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_11.csv")
+Mar2021 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_12.csv")
+Apr2021 <- read.csv("C:\\Users\\Pratibha\\Desktop\\Data Analyst Portfolio\\Bicycle Data\\Trip_data_13.csv")
+```
+
+
+By checking structure of all the files it is clear that start_station_id and end_station_id columns were
+integer datatype for 2020 except for December month and Character data type for 2021.We will have to change the 
+data type of four files in 2021 to integer so that we bind all the csv files into one data frame
+
+```{r , warning=FALSE, echo=FALSE}
+Dec2020 <- Dec2020 %>% mutate(start_station_id = as.integer(start_station_id), 
+                              end_station_id = as.integer(end_station_id))
+
+Jan2021 <- Jan2021 %>% mutate(start_station_id = as.integer(start_station_id), 
+                              end_station_id = as.integer(end_station_id))
+Feb2021 <- Feb2021 %>% mutate(start_station_id = as.integer(start_station_id), 
+                              end_station_id = as.integer(end_station_id))
+Mar2021 <- Mar2021 %>% mutate(start_station_id = as.integer(start_station_id), 
+                              end_station_id = as.integer(end_station_id))
+Apr2021 <- Apr2021 %>% mutate(start_station_id = as.integer(start_station_id), 
+                              end_station_id = as.integer(end_station_id))
+
+
+cycle_trips<-bind_rows(May2020,June2020,July2020,August2020,Sept2020,Oct2020,
+                       Nov2020,Dec2020,Jan2021, Feb2021, Mar2021,Apr2021)
+
+```
+
+
+### Cleaning The Data
+  + Removing NAs
+  + Removing Duplicates
+  
+Remove NA from the data set cycle_trips  
+```{r, echo =FALSE}  
+
+na_vecs <- which(!complete.cases(cycle_trips))
+cycle_trips <- cycle_trips[-na_vecs]
+
+```
+
+Find duplicate entries
+
+```{r, echo=FALSE}
+cycle_trips %>% group_by(ride_id) %>%
+  filter(length(ride_id)>1)%>%
+  summarise(num_duplicates = length(ride_id))
+```
+
+
+There are 789 duplicate values
+Remove the duplicates 
+
+```{r}
+cycle_trips_final <- cycle_trips[!duplicated(cycle_trips$ride_id),]
+```
+
+### First 6 rows of the data frame
+
+```{r, echo=FALSE}
+head(cycle_trips_final)
+```
+
+### Summary of the data frame
+
+```{r, echo=FALSE}
+summary(cycle_trips_final)
+```
+
+### Final Data Frame after Data Wrangling 
+
+```{r, echo=FALSE, warning=FALSE}
+# separating started_time column so that day, month, year and time can be in separate column
+
+cycle_trips_final$date <- as.Date(cycle_trips_final$started_at,format = "%m/%d/%y") #default format does not work here
+cycle_trips_final$month <- format(as.Date(cycle_trips_final$date),"%m")
+cycle_trips_final$day <- format(as.Date(cycle_trips_final$date),"%d")
+cycle_trips_final$year <- format(as.Date(cycle_trips_final$date),"%Y")
+cycle_trips_final$day_of_week <- format(as.Date(cycle_trips_final$date),"%A")
+
+
+#Converting char columns started_at/ended_at to date from char
+
+cycle_trips_final$started_at <- mdy_hm(cycle_trips_final$started_at,tz=Sys.timezone())
+cycle_trips_final$ended_at <- mdy_hm(cycle_trips_final$ended_at,tz=Sys.timezone())
+
+
+
+#Adding calculated ride_length column (2)
+
+cycle_trips_final$ride_length <- difftime(cycle_trips_final$ended_at,cycle_trips_final$started_at)
+
+
+
+# Creating a column with month name corresponding to the month column 
+
+cycle_trips_final$month_name <- months(cycle_trips_final$started_at)
+
+head(cycle_trips_final)
+
+# filtering out entries from the dataframe when bikes were taken out of docks or ride_length was negative:
+
+cycle_trips_final <- cycle_trips_final[!(cycle_trips_final$start_station_name == "HQ QR" | cycle_trips_final$ride_length<0),]
+
+
+```
+
+## Visualization and Analysis
+
+### Day Wise  number of Rides Average Time Spent By Members and Casual Riders
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+membertype_day<- cycle_trips_final %>% group_by(member_casual, day_of_week) %>%
+  summarise(number_rides = n(), average_ridelength = round(mean(ride_length), 2)) %>%
+  arrange(member_casual, day_of_week)
+view(membertype_day)
+```
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+
+membertype_day %>% ggplot(aes(day_of_week, number_rides, fill = member_casual)) +
+  geom_col(position = "dodge" , width = .5 , color = "black") +
+  labs(x = "day_of_week", y = "number of rides")+
+  scale_y_continuous(breaks =  c(100000,200000,300000,400000),
+                                 labels = c("100k","200k","300k","400k"))+
+  theme_grey() +
+  ggtitle(" Number of Rides Based on User Type on Days of Week", subtitle = "May 2020 to April 2021")
+
+  
+
+
+membertype_day %>% ggplot(aes(day_of_week ,average_ridelength, fill = member_casual)) +
+  geom_col(position = "dodge" , width = .5 , color = "black") +
+  labs(x = "Weekdays", y = "Average Ride Length") +
+  scale_y_continuous(breaks =  c(100000,200000,300000,400000),
+                     labels = c("100k","200k","300k","400k"))+
+  theme_grey() +
+  ggtitle(" Average of Ride Time Based on User Type on Days of Week ", subtitle  = "May 2020 to April 2021")
+  
+```
+
+### Average Ride Length and Number of Rides Based on User Types
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+averageridelength_usertype <- membertype_day %>% group_by(member_casual) %>% 
+  summarise (mean_duration = mean(average_ridelength))
+
+averagenumrides_usertype <- membertype_day %>% group_by(member_casual) %>% 
+  summarise(mean_numofrides = mean(number_rides))
+```
+
+
+### Graphical Representation of Mean of number of rides for both member and casual
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+
+
+averageridelength_usertype %>% ggplot( aes(x = member_casual ,y = mean_duration,  fill = member_casual)) +
+  geom_col(color = "black",position = "dodge") +
+  theme_grey()
+            
+
+averagenumrides_usertype %>% ggplot( aes(x = member_casual ,y = mean_numofrides,  fill = member_casual)) +
+  geom_col(color = "black",position = "dodge",
+           show.legend = FALSE , width = .5)+
+  scale_y_continuous(breaks =  c(100000,200000,300000,400000),
+                     labels = c("100k","200k","300k","400k")) +
+  geom_text(aes(label = round(mean_numofrides, 2)))+
+  theme_grey()
+```
+
+
+### Cycle Usage Based On Bike Type And Member Type
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+
+
+ride_type<- cycle_trips_final %>% group_by(member_casual, rideable_type)%>% summarise(num_ride = n())
+
+
+ride_type %>% ggplot(aes(x= rideable_type, y = num_ride, fill = member_casual, color = member_casual)) + 
+  geom_bar(stat='identity', position = "dodge") + ggtitle("Cycle Usage Based On Bike Type And Member Type", 
+                                                          subtitle = "From May 2020 - April 2021")+ theme_grey()+
+  scale_y_continuous(breaks =  c(100000,500000,900000,1300000,1700000),labels = c("100k","500k","900k","1300k", "1700k"))+
+  theme_grey()
+```
+
+### Average ride time  and number of rides based on month and User Type
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+ride_month_usertype <- cycle_trips_final %>% group_by(month_name, member_casual) %>%
+  summarise(mean_ride_length= mean(ride_length)) 
+
+
+ride_month_usertype %>% ggplot(aes(x= month_name, y = mean_ride_length, fill = member_casual, color = member_casual)) + 
+  geom_bar(stat='identity', position = "dodge") + ggtitle("Average Usage Time Based On Month And Member Type", 
+                                                          subtitle = "From May 2020 - April 2021")+ theme_grey()+
+  scale_y_continuous(breaks =  c(100000,200000,300000,400000,500000),labels = c("100k","200k","300k","400k", "500k"))+
+  theme_grey()
+  
+ride_type_month <- cycle_trips_final%>% group_by(member_casual, month_name) %>% summarise(num_ride_month = n())
+ride_type_month
+
+ride_type_month %>% ggplot(aes(month_name, num_ride_month,fill = member_casual,color = member_casual)) +
+  geom_bar(stat='identity', position = "dodge") +ggtitle("Number of Rides Based On Month And Member Type", 
+                                                          subtitle = "From May 2020 - April 2021") +
+  scale_y_continuous(breaks =  c(100000,200000,300000,400000),labels = c("100k","200k","300k","400k")) +
+  theme_grey()
+
+
+```
+
+## Inferences
+
+ + Docked Bikes are most popular in both type of users. The reason for it can be that you don't have to return the    the bike to the same station. You can return it to any assigned station of Cyclistic. This can be taken a level    up, to attract customers, by introducing dock less bike. In case of dock less cycle, you don't need dock           stations at all to leave the bike. You can leave it by using a lock which is operated by application.
+   Smartphone users will have the app, as well as GPS, to find a cycle in their vicinity. 
+ + Casual riders cover more distance than members. Also,members use cycles year around with almost same frequency 
+   where as casual users use more during summer months.Casual riders use cycles more on the weekends whereas          members use it more during the weekdays. This implies that sightseers and tourists use bikes a lot so increasing    the number of docked bikes during summer months (June-September) will increase the usage.
+ + Average time spend on bike is more for casual riders than members.This implies that members use cycles to go to
+   a fixed distance from a point A to B but they are regular whereas casual riders spend more time and distance       exploring the city. Creating convenient docking stations close to  city attractions like Museums, Parks and        other famous tourists hot spots might help in more usage of the cycles.
+ 
